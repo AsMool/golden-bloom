@@ -1,0 +1,101 @@
+.join {
+  display: grid;
+  justify-items: center;
+  text-align: center;
+}
+
+.join__mark {
+  width: 72px;
+  height: auto;
+  margin-bottom: 0.4rem;
+}
+
+.join__title {
+  font-size: clamp(1.8rem, 2vw + 1.2rem, 2.3rem);
+  margin-bottom: 0.5rem;
+}
+
+.join__reason {
+  margin-bottom: 0.4rem;
+  color: var(--ink-3);
+}
+
+.join__form {
+  display: grid;
+  gap: 1.1rem;
+  width: 100%;
+  margin-top: 1rem;
+  text-align: left;
+}
+
+.madlib {
+  font-family: var(--font-display);
+  font-size: clamp(1.35rem, 1.4vw + 1rem, 1.65rem);
+  line-height: 2.1;
+  color: var(--ink);
+  font-weight: 450;
+}
+
+.madlib > span {
+  margin-right: 0.3em;
+}
+
+.madlib > .madlib__comma {
+  margin-left: -0.3em;
+}
+
+.blank {
+  display: inline-block;
+  margin-right: 0.3em;
+  vertical-align: baseline;
+}
+
+.blank input {
+  width: 100%;
+  border: 0;
+  border-bottom: 2.5px dashed var(--gold);
+  border-radius: 0;
+  background: transparent;
+  padding: 0 0.15em 0.05em;
+  font-family: var(--font-hand);
+  font-size: 0.95em;
+  color: var(--ink);
+  text-align: center;
+  transition:
+    border-color 0.15s,
+    background-color 0.15s;
+}
+
+.blank input::placeholder {
+  color: #c4b292;
+}
+
+.blank input:focus {
+  outline: none;
+  border-bottom-style: solid;
+  background: var(--butter-100);
+  border-radius: 8px 8px 0 0;
+}
+
+.blank--name {
+  width: 7.5em;
+}
+
+.blank--age {
+  width: 2.6em;
+}
+
+.join__go {
+  width: 100%;
+}
+
+.join__small {
+  font-size: 0.88rem;
+  color: var(--ink-3);
+  line-height: 1.5;
+}
+
+.join .link-btn {
+  justify-self: center;
+  font-size: 0.92rem;
+}

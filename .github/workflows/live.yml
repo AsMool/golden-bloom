@@ -1,0 +1,28 @@
+name: Live site check
+
+# Read-only checks on the real site after each Vercel production deploy.
+# Can also be started by hand from the Actions tab, with any address.
+on:
+  deployment_status:
+  workflow_dispatch:
+    inputs:
+      url:
+        description: Address of the site to check
+        required: true
+
+jobs:
+  smoke:
+    if: github.event_name == 'workflow_dispatch' || (github.event.deployment_status.state == 'success' && github.event.deployment.environment == 'Production')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - name: Smoke tests
+        run: node --test --test-concurrency=1 e2e/smoke.test.mjs
+        env:
+          BASE_URL: ${{ inputs.url || github.event.deployment_status.environment_url || github.event.deployment_status.target_url }}

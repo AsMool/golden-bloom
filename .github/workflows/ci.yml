@@ -1,0 +1,87 @@
+name: Checks
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: checks-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  site:
+    name: Lint, unit tests and build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+      - run: npm test
+      - run: npm run build
+
+  garden:
+    name: Database and browser tests
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_HOST_AUTH_METHOD: trust
+        ports:
+          - 54322:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 2s
+          --health-timeout 5s
+          --health-retries 20
+    env:
+      POSTGREST_VERSION: v12.2.12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+
+      - name: Install PostgREST
+        run: |
+          curl -fsSL "https://github.com/PostgREST/postgrest/releases/download/${POSTGREST_VERSION}/postgrest-${POSTGREST_VERSION}-linux-static-x86-64.tar.xz" | sudo tar -xJ -C /usr/local/bin
+          postgrest --version
+
+      - name: Create the test database
+        run: ./supabase/tests/reset_local.sh
+
+      - name: Start the local API
+        run: |
+          nohup ./supabase/tests/local_api.sh > api.log 2>&1 &
+          for _ in $(seq 1 50); do
+            curl -sf -X POST http://127.0.0.1:54331/rest/v1/rpc/garden_stats -H 'content-type: application/json' -d '{}' > /dev/null && exit 0
+            sleep 0.3
+          done
+          cat api.log
+          exit 1
+
+      - name: Database API tests
+        run: node --test --test-concurrency=1 supabase/tests/api.test.mjs
+
+      - name: Build the site against the local API
+        run: VITE_SUPABASE_URL=http://127.0.0.1:54331 VITE_SUPABASE_KEY="$(node supabase/tests/anon_jwt.mjs)" npm run build
+
+      - name: Install the browser
+        run: npx playwright install --with-deps chromium
+
+      - name: Browser tests
+        run: |
+          nohup npx vite preview --host 127.0.0.1 --port 4173 --strictPort > preview.log 2>&1 &
+          for _ in $(seq 1 60); do curl -sf http://127.0.0.1:4173 > /dev/null && break; sleep 0.5; done
+          BASE_URL=http://127.0.0.1:4173 E2E_WRITE=1 MOD_CODE=local-test-code node --test --test-concurrency=1 'e2e/*.test.mjs'
+
+      - name: Logs
+        if: failure()
+        run: cat api.log preview.log || true

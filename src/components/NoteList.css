@@ -1,0 +1,90 @@
+.note-columns {
+  display: grid;
+  gap: clamp(1.1rem, 2.2vw, 1.6rem);
+  align-items: start;
+}
+
+.note-columns__col {
+  display: grid;
+  gap: clamp(1.3rem, 2.4vw, 1.8rem);
+  min-width: 0;
+}
+
+.note-skeleton {
+  border-radius: var(--radius-m);
+  background: linear-gradient(100deg, var(--butter-50) 30%, var(--butter-100) 50%, var(--butter-50) 70%) 0 0 / 300% 100%;
+  animation: shimmer 1.6s linear infinite;
+}
+
+@keyframes shimmer {
+  to {
+    background-position: -150% 0;
+  }
+}
+
+.note-list {
+  display: grid;
+  gap: 1.25rem;
+}
+
+.note-list__more {
+  display: flex;
+  justify-content: center;
+  margin-top: 0.75rem;
+}
+
+.fresh-pill {
+  position: sticky;
+  top: calc(var(--header-h) + 0.75rem);
+  z-index: 5;
+  justify-self: center;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.55rem 1rem;
+  border: 0;
+  border-radius: 999px;
+  background: var(--ink);
+  color: var(--cream);
+  font-weight: 600;
+  font-size: 0.9rem;
+  box-shadow: var(--shadow-2);
+  animation: toast-in 0.35s var(--ease-spring);
+}
+
+.fresh-pill svg {
+  color: var(--sun);
+}
+
+.list-message {
+  display: grid;
+  justify-items: center;
+  gap: 1rem;
+  padding: 2.5rem 1rem;
+  text-align: center;
+  color: var(--ink-3);
+}
+
+.empty {
+  display: grid;
+  justify-items: center;
+  gap: 0.8rem;
+  padding: clamp(2rem, 6vw, 3.5rem) 1rem;
+  border: 2px dashed var(--line-2);
+  border-radius: var(--radius-l);
+  text-align: center;
+}
+
+.empty img {
+  width: 96px;
+  height: 96px;
+}
+
+.empty h3 {
+  font-size: 1.35rem;
+}
+
+.empty p {
+  max-width: 36ch;
+  color: var(--ink-3);
+}
