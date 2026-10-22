@@ -56,7 +56,7 @@ To check the live site without changing anything:
 BASE_URL=https://goldenbloom.vercel.app node --test e2e/smoke.test.mjs
 ```
 
-The "Live site check" workflow does this after every production deploy.
+Or from GitHub: **Actions → Live site check → Run workflow** (leave the address empty to test the current code against the real database).
 
 ## Looking after the garden
 

@@ -1,8 +1,9 @@
 name: Live site check
 
-# Read-only checks on the real site (https://goldenbloom.vercel.app) after each Vercel production deploy.
-# Can also be started by hand from the Actions tab: with an address it checks that site;
-# left empty, it builds this commit and checks it against the real database.
+# Read-only checks on the real site (https://goldenbloom.vercel.app).
+# Start it by hand from the Actions tab: with an address it checks that site; left empty,
+# it builds this commit and checks it against the real database. It also runs after a
+# production deploy when Vercel reports deployments to GitHub.
 on:
   deployment_status:
   workflow_dispatch:
@@ -47,4 +48,5 @@ jobs:
         if: env.SKIP != '1'
         run: |
           echo "Checking $BASE_URL"
+          curl -s "$BASE_URL" | grep -o 'og:url" content="[^"]*"' || true
           node --test --test-concurrency=1 e2e/smoke.test.mjs
