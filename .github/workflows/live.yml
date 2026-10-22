@@ -29,6 +29,12 @@ jobs:
           GIVEN: ${{ inputs.url || github.event.deployment_status.environment_url || github.event.deployment_status.target_url }}
         run: |
           if [ -n "$GIVEN" ]; then
+            # a deployment behind Vercel's login page can't be checked from here
+            read -r code where <<< "$(curl -s -o /dev/null -w '%{http_code} %{redirect_url}' "$GIVEN")"
+            if [ "$code" = "401" ] || [ "$code" = "403" ] || [[ "$where" == *vercel.com* ]]; then
+              echo "::notice::$GIVEN asks for a Vercel login, so it was not checked. Run this workflow by hand with the public address."
+              echo "SKIP=1" >> "$GITHUB_ENV"
+            fi
             echo "BASE_URL=$GIVEN" >> "$GITHUB_ENV"
           else
             npm run build
@@ -38,6 +44,7 @@ jobs:
           fi
 
       - name: Smoke tests
+        if: env.SKIP != '1'
         run: |
           echo "Checking $BASE_URL"
           node --test --test-concurrency=1 e2e/smoke.test.mjs
