@@ -122,7 +122,7 @@ export function AboutPage({ section }: { section?: string }) {
         <div className="safety-grid">
           <div>
             <h3>A kind-words filter</h3>
-            <p>Notes with insults, slurs or body-shaming words, in English and in French, cannot be posted. Sneaky spellings with numbers, dots or spaces don't get through either.</p>
+            <p>Notes with insults, slurs or body-shaming words, in English and in French, cannot be posted. Sneaky spellings with numbers, dots, spaces or stars don't get through either.</p>
           </div>
           <div>
             <h3>A gentle double-check</h3>

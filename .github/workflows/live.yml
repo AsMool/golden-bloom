@@ -1,14 +1,15 @@
 name: Live site check
 
 # Read-only checks on the real site after each Vercel production deploy.
-# Can also be started by hand from the Actions tab, with any address.
+# Can also be started by hand from the Actions tab: with an address it checks that site;
+# left empty, it builds this commit and checks it against the real database.
 on:
   deployment_status:
   workflow_dispatch:
     inputs:
       url:
-        description: Address of the site to check
-        required: true
+        description: Address of the site to check (empty = build this commit and use the real database)
+        required: false
 
 jobs:
   smoke:
@@ -22,7 +23,21 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npx playwright install --with-deps chromium
-      - name: Smoke tests
-        run: node --test --test-concurrency=1 e2e/smoke.test.mjs
+
+      - name: Pick the address
         env:
-          BASE_URL: ${{ inputs.url || github.event.deployment_status.environment_url || github.event.deployment_status.target_url }}
+          GIVEN: ${{ inputs.url || github.event.deployment_status.environment_url || github.event.deployment_status.target_url }}
+        run: |
+          if [ -n "$GIVEN" ]; then
+            echo "BASE_URL=$GIVEN" >> "$GITHUB_ENV"
+          else
+            npm run build
+            nohup npx vite preview --host 127.0.0.1 --port 4173 --strictPort > preview.log 2>&1 &
+            for _ in $(seq 1 60); do curl -sf http://127.0.0.1:4173 > /dev/null && break; sleep 0.5; done
+            echo "BASE_URL=http://127.0.0.1:4173" >> "$GITHUB_ENV"
+          fi
+
+      - name: Smoke tests
+        run: |
+          echo "Checking $BASE_URL"
+          node --test --test-concurrency=1 e2e/smoke.test.mjs

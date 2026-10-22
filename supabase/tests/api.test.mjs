@@ -116,6 +116,18 @@ test('posting a note: categories, length, kind words, personal info', async () =
   }
 })
 
+test('starred-out swear words are caught, starred kind words are not', async () => {
+  const key = await join('Lou')
+  const post = (body) => rpc('post_note', { p_key: key, p_category: 'bad_day_comfort', p_body: body })
+  for (const mean of ['f*ck this day', 'you are such a b**ch', 'what a sh#t day']) {
+    await rejects(post(mean), 'unkind_words')
+  }
+  for (const fine of ['*hugs* for you today', 'You are a *star*, always', 'C# and F# are both lovely notes, like you']) {
+    const note = await post(fine)
+    assert.equal(note.body, fine)
+  }
+})
+
 test('rate limits and duplicates', async () => {
   const key = await join('Rose')
   const post = (body) => rpc('post_note', { p_key: key, p_category: 'mirror_talk', p_body: body })
