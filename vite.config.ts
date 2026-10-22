@@ -1,10 +1,9 @@
 import react from '@vitejs/plugin-react'
 import { defineConfig, type Plugin } from 'vite'
 
-// Link previews need an absolute address for the picture. On Vercel it is the project's main domain.
+// Link previews need an absolute address for the picture: the site's main address.
 function siteOrigin(): Plugin {
-  const domain = process.env.VERCEL_PROJECT_PRODUCTION_URL
-  const origin = process.env.SITE_ORIGIN ?? (domain ? `https://${domain}` : '')
+  const origin = process.env.SITE_ORIGIN ?? 'https://goldenbloom.vercel.app'
   return {
     name: 'site-origin',
     transformIndexHtml: (html) => html.replaceAll('__SITE_ORIGIN__', origin),

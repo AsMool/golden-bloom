@@ -2,6 +2,8 @@
 
 A little garden of kind words. Leave a kind note, take one when you need it.
 
+**Visit it at [goldenbloom.vercel.app](https://goldenbloom.vercel.app)**
+
 Golden Bloom is a body-positivity and self-love website made for a class project. Classmates (and anyone they share it with) can write kind notes to each other, to strangers, or to the person in the mirror.
 
 ## What you can do
@@ -51,7 +53,7 @@ The database and browser tests need a local Postgres 16 on port 54322 and a [Pos
 To check the live site without changing anything:
 
 ```sh
-BASE_URL=https://your-site.vercel.app node --test e2e/smoke.test.mjs
+BASE_URL=https://goldenbloom.vercel.app node --test e2e/smoke.test.mjs
 ```
 
 The "Live site check" workflow does this after every production deploy.

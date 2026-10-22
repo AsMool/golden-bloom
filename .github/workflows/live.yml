@@ -1,6 +1,6 @@
 name: Live site check
 
-# Read-only checks on the real site after each Vercel production deploy.
+# Read-only checks on the real site (https://goldenbloom.vercel.app) after each Vercel production deploy.
 # Can also be started by hand from the Actions tab: with an address it checks that site;
 # left empty, it builds this commit and checks it against the real database.
 on:
@@ -16,8 +16,8 @@ jobs:
     if: github.event_name == 'workflow_dispatch' || (github.event.deployment_status.state == 'success' && github.event.deployment.environment == 'Production')
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
           node-version: 22
           cache: npm
@@ -26,7 +26,7 @@ jobs:
 
       - name: Pick the address
         env:
-          GIVEN: ${{ inputs.url || github.event.deployment_status.environment_url || github.event.deployment_status.target_url }}
+          GIVEN: ${{ inputs.url || (github.event_name == 'deployment_status' && 'https://goldenbloom.vercel.app') || '' }}
         run: |
           if [ -n "$GIVEN" ]; then
             # a deployment behind Vercel's login page can't be checked from here

@@ -2,7 +2,7 @@
 //   BASE_URL=https://… node --test e2e/smoke.test.mjs
 import assert from 'node:assert/strict'
 import { after, before, test } from 'node:test'
-import { launch, notesOn, open, visit } from './browser.mjs'
+import { BASE, launch, notesOn, open, visit } from './browser.mjs'
 
 let browser
 before(async () => {
@@ -18,6 +18,15 @@ test('the home page shows the garden and the most loved notes', async () => {
   await notesOn(page).first().waitFor({ timeout: 15_000 })
   assert.ok((await notesOn(page).count()) >= 1)
   assert.deepEqual(errors, [])
+})
+
+test('shared links get a preview picture', async () => {
+  const { page } = await open(browser, '/')
+  const image = await page.locator('meta[property="og:image"]').getAttribute('content')
+  assert.match(image, /^https:\/\/[^/]+\/og-image\.png$/, 'an absolute address')
+  const res = await page.request.get(`${BASE}/og-image.png`)
+  assert.equal(res.status(), 200)
+  assert.equal(res.headers()['content-type'], 'image/png')
 })
 
 test('the envelope opens on a kind note', async () => {
