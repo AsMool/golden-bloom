@@ -333,7 +333,7 @@ a.note__cat:hover {
 }
 
 .note--hidden {
-  outline: 2px dashed var(--line-2);
+  outline: 2px solid var(--line-2);
   outline-offset: 3px;
 }
 
