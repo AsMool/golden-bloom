@@ -53,7 +53,7 @@
 .blank input {
   width: 100%;
   border: 0;
-  border-bottom: 2.5px dashed var(--gold);
+  border-bottom: 2px solid var(--gold);
   border-radius: 0;
   background: transparent;
   padding: 0 0.15em 0.05em;

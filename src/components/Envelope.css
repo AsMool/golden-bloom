@@ -133,7 +133,7 @@
   position: absolute;
   inset: 5px;
   border-radius: 50%;
-  border: 1.5px dashed rgb(255 244 212 / 55%);
+  border: 1.5px solid rgb(255 244 212 / 55%);
 }
 
 .envelope:hover .envelope__seal {

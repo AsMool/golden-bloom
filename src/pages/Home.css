@@ -132,7 +132,8 @@
   align-items: start;
   padding: clamp(1.6rem, 4vw, 2.75rem);
   border-radius: var(--radius-xl);
-  border: 2px dashed var(--line-2);
+  background: var(--butter-50);
+  box-shadow: inset 0 0 0 1px var(--line);
 }
 
 .rules-card h2 {
