@@ -2,8 +2,14 @@ import { GardenError } from './api'
 
 const messages: Record<string, string> = {
   network: "We couldn't reach the garden. Check your connection and try again.",
-  not_a_member: "This device's garden key doesn't work anymore. Join again to keep going.",
-  invalid_name: 'Just your first name, please: letters only, up to 24 of them.',
+  not_a_member: "You've been logged out. Log in again to keep going.",
+  invalid_name: 'Your first name should be letters only, up to 24 of them.',
+  invalid_last_name: 'Your last name should be letters only, up to 24 of them.',
+  name_taken:
+    'Someone already joined with that name. If it is you, log in instead. If not, add a letter or a second name to your last name (like "Martin B").',
+  weak_password: 'Pick a password of at least 6 characters, and not your name or something very common like 123456.',
+  wrong_login: "That name and password don't match. Check the spelling of both.",
+  wrong_password: "That isn't your current password.",
   unkind_name: "Let's pick a kinder name than that.",
   invalid_age: 'Your age should be a number between 10 and 99.',
   invalid_gender: 'Pick one of the options (you can always choose "rather not say").',

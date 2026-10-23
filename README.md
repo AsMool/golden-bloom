@@ -11,7 +11,7 @@ Golden Bloom is a body-positivity and self-love website made for a class project
 - **Read** notes in six corners of the garden: Confidence Boost, Bad Day Comfort, Body Love Letters, You Are Not Alone, Mirror Talk and From Me To You. Notes in From Me To You are always anonymous.
 - **Open the mailbox** on the home page for a random kind note, as many times as you like.
 - **Give hearts and share.** The notes with the most hearts and shares climb into Most Loved.
-- **Join** with a first name, an age and a gender. Nothing else: no email, no password. The browser keeps a secret "garden key" that you can copy to use the site on another phone.
+- **Join** with a first name, a last name, an age, a gender and a password. No email. Log in on any device with your first name, last name and password; the browser remembers you. Signed notes show "Sarah M." (first name and the first letter of the last name).
 - **Report** a note that hurts. After three reports it is hidden until a moderator looks at it.
 
 ## Keeping it kind
@@ -20,7 +20,8 @@ Golden Bloom is a body-positivity and self-love website made for a class project
 - Some words, like "ugly", can be kind ("you're not ugly at all"). Notes that use them ask the writer to check, then wait for a moderator.
 - Links, emails, phone numbers and @usernames are refused, so nobody can be found through a note.
 - Gentle limits stop anyone from flooding the garden with notes, hearts, reports or sign-ups.
-- Age and gender are never shown. Leaving the garden removes your notes and hearts and erases your name.
+- Passwords are stored hashed (bcrypt), never in clear. Wrong guesses are limited per name and per network.
+- Age, gender and last name are never shown in full. Leaving the garden removes your notes and hearts and erases your name.
 
 ## How it is built
 
@@ -60,7 +61,7 @@ Or from GitHub: **Actions → Live site check → Run workflow** (leave the addr
 
 ## Looking after the garden
 
-Moderators unlock their tools in **Me → Settings** with the moderator code. Things only the database owner can do, in the Supabase SQL editor:
+Moderators unlock their tools in **Me → Settings** with the moderator code. If someone forgets their password, a moderator types their name in the **Locked out?** card at the bottom of the moderation page and gets a temporary password to give them. Things only the database owner can do, in the Supabase SQL editor:
 
 ```sql
 -- change the moderator code

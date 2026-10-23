@@ -153,11 +153,15 @@ function Settings() {
   const { key, member, setMember, forget } = useSession()
   const { toast, fail } = useUi()
   const [name, setName] = useState(member?.first_name ?? '')
+  const [last, setLast] = useState(member?.last_name ?? '')
   const [age, setAge] = useState(String(member?.age ?? ''))
   const [gender, setGender] = useState<Gender>(member?.gender ?? 'prefer_not_to_say')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [showKey, setShowKey] = useState(false)
+  const [oldPw, setOldPw] = useState('')
+  const [newPw, setNewPw] = useState('')
+  const [pwError, setPwError] = useState<string | null>(null)
+  const [pwSaving, setPwSaving] = useState(false)
   const [code, setCode] = useState('')
   const [codeError, setCodeError] = useState<string | null>(null)
   const [confirm, setConfirm] = useState<'forget' | 'leave' | null>(null)
@@ -169,7 +173,7 @@ function Settings() {
     setSaving(true)
     setError(null)
     try {
-      const updated = await api.updateMe(key, name.trim(), Number(age), gender)
+      const updated = await api.updateMe(key, name.trim(), last.trim(), Number(age), gender)
       setMember(updated)
       toast('Saved!', 'success')
     } catch (err) {
@@ -179,13 +183,19 @@ function Settings() {
     }
   }
 
-  const copyKey = async () => {
+  const savePassword = async (e: FormEvent) => {
+    e.preventDefault()
+    setPwSaving(true)
+    setPwError(null)
     try {
-      await navigator.clipboard.writeText(key)
-      toast('Garden key copied. Keep it somewhere safe!', 'success')
-    } catch {
-      setShowKey(true)
-      toast('Could not copy. Select the key and copy it by hand.', 'error')
+      await api.changePassword(key, oldPw, newPw)
+      setOldPw('')
+      setNewPw('')
+      toast('Password changed!', 'success')
+    } catch (err) {
+      setPwError(friendlyError(err))
+    } finally {
+      setPwSaving(false)
     }
   }
 
@@ -221,11 +231,15 @@ function Settings() {
     <div className="settings">
       <form className="settings__card" onSubmit={save}>
         <h2>About you</h2>
-        <p className="muted">Only your first name is shown, on the notes you sign. Your age and gender stay private.</p>
+        <p className="muted">Notes you sign show your first name and the first letter of your last name, like “{member.display_name}”. Your age and gender stay private.</p>
         <div className="settings__grid">
           <label className="field">
             <span className="field__label">First name</span>
             <input className="input" value={name} onChange={(e) => setName(e.target.value)} maxLength={24} autoComplete="given-name" />
+          </label>
+          <label className="field">
+            <span className="field__label">Last name</span>
+            <input className="input" value={last} onChange={(e) => setLast(e.target.value)} maxLength={24} autoComplete="family-name" />
           </label>
           <label className="field">
             <span className="field__label">Age</span>
@@ -261,24 +275,32 @@ function Settings() {
         </div>
       </form>
 
-      <section className="settings__card">
+      <form className="settings__card" onSubmit={savePassword}>
         <h2>
-          <Icon name="key" /> Your garden key
+          <Icon name="key" /> Password
         </h2>
-        <p className="muted">
-          There is no password here: this key is how the garden knows it's you. Copy it somewhere safe (your notes app is perfect). You
-          need it to open your garden on another phone, or if you clear your browser.
-        </p>
-        <code className={`garden-key${showKey ? '' : ' garden-key--hidden'}`}>{showKey ? key : `${key.slice(0, 6)}${'•'.repeat(22)}`}</code>
-        <div className="settings__row">
-          <button type="button" className="btn btn--small" onClick={copyKey}>
-            <Icon name="copy" size={17} /> Copy key
-          </button>
-          <button type="button" className="btn btn--small btn--quiet" onClick={() => setShowKey((s) => !s)}>
-            <Icon name="eye" size={17} /> {showKey ? 'Hide' : 'Show'}
+        <p className="muted">You log in on any device with your first name, last name and password. Forgot it? A moderator can give you a temporary one.</p>
+        <div className="settings__grid">
+          <label className="field">
+            <span className="field__label">Current password</span>
+            <input className="input" type="password" value={oldPw} onChange={(e) => setOldPw(e.target.value)} autoComplete="current-password" />
+          </label>
+          <label className="field">
+            <span className="field__label">New password</span>
+            <input className="input" type="password" value={newPw} onChange={(e) => setNewPw(e.target.value)} autoComplete="new-password" maxLength={50} />
+          </label>
+        </div>
+        {pwError && (
+          <p className="form-error" role="alert">
+            {pwError}
+          </p>
+        )}
+        <div>
+          <button className="btn btn--small" disabled={pwSaving || !oldPw || !newPw}>
+            {pwSaving ? 'Saving…' : 'Change password'}
           </button>
         </div>
-      </section>
+      </form>
 
       <section className="settings__card">
         <h2>
@@ -327,23 +349,23 @@ function Settings() {
         </h2>
         <div className="settings__row">
           <button type="button" className="btn btn--small" onClick={() => setConfirm('forget')}>
-            Forget me on this device
+            Log out
           </button>
           <button type="button" className="btn btn--small btn--danger" onClick={() => setConfirm('leave')}>
             Leave the garden
           </button>
         </div>
         <p className="muted settings__fine">
-          "Forget me" signs you out here; your notes stay and you can come back with your key. "Leave the garden" removes your notes and
+          "Log out" signs you out on this device; your notes stay and you can log back in anytime. "Leave the garden" removes your notes and
           hearts and erases your name, for good.
         </p>
       </section>
 
       {confirm === 'forget' && (
         <ConfirmSheet
-          title="Forget you on this device?"
-          body={`Make sure you copied your garden key first, or you won't be able to come back as ${member.first_name}. Your notes stay in the garden.`}
-          confirmLabel="Forget me here"
+          title="Log out?"
+          body="You can log back in anytime with your first name, last name and password. Your notes stay in the garden."
+          confirmLabel="Log out"
           danger={false}
           onConfirm={() => {
             forget()

@@ -150,10 +150,13 @@ export function AboutPage({ section }: { section?: string }) {
       <section id="privacy" className="container container--narrow section">
         <h2>Your privacy</h2>
         <ul className="plain-list">
-          <li>We only ask for your first name, your age and your gender. Your age and gender are never shown to anyone.</li>
           <li>
-            There is no email and no password. Your browser keeps a secret garden key instead; copy it from your profile if you want to use
-            another device.
+            We ask for your first name, last name, age and gender, and a password you choose. Notes you sign show your first name and the
+            first letter of your last name (like "Sarah M."). Your age and gender are never shown to anyone.
+          </li>
+          <li>
+            There is no email. Your password is stored scrambled, so nobody can read it, not even us. You log in with your first name,
+            last name and password on any device. If you forget it, a moderator can give you a temporary one.
           </li>
           <li>Notes in From Me To You are anonymous: your name is never attached to them.</li>
           <li>Leaving the garden removes your notes and hearts and erases your name.</li>

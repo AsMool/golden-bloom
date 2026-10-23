@@ -40,6 +40,9 @@ export interface QueuedNote extends Note {
 export interface Member {
   id: string
   first_name: string
+  last_name: string | null
+  /** "Sarah M.": what notes show */
+  display_name: string
   age: number
   gender: Gender
   is_moderator: boolean

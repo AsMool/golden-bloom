@@ -28,11 +28,41 @@ async function call<T>(fn: string, args: Record<string, unknown> = {}): Promise<
 }
 
 export const api = {
-  join: (firstName: string, age: number, gender: Gender) =>
-    call<{ key: string; member: Member }>('join_garden', { p_first_name: firstName, p_age: age, p_gender: gender }),
+  join: (o: { firstName: string; lastName: string; age: number; gender: Gender; password: string }) =>
+    call<{ key: string; member: Member }>('sign_up', {
+      p_first_name: o.firstName,
+      p_last_name: o.lastName,
+      p_age: o.age,
+      p_gender: o.gender,
+      p_password: o.password,
+    }),
+  // a wrong name or password comes back as an answer, not an error (see log_in in the database)
+  logIn: async (firstName: string, lastName: string, password: string) => {
+    const res = await call<{ ok: boolean; error?: string; key?: string; member?: Member }>('log_in', {
+      p_first_name: firstName,
+      p_last_name: lastName,
+      p_password: password,
+    })
+    if (!res.ok || !res.key || !res.member) throw new GardenError(res.error ?? 'wrong_login')
+    return { key: res.key, member: res.member }
+  },
   me: (key: string) => call<Member>('me', { p_key: key }),
-  updateMe: (key: string, firstName: string, age: number, gender: Gender) =>
-    call<Member>('update_me', { p_key: key, p_first_name: firstName, p_age: age, p_gender: gender }),
+  updateMe: (key: string, firstName: string, lastName: string, age: number, gender: Gender) =>
+    call<Member>('update_profile', { p_key: key, p_first_name: firstName, p_last_name: lastName, p_age: age, p_gender: gender }),
+  changePassword: async (key: string, oldPassword: string, newPassword: string) => {
+    const res = await call<{ ok: boolean; error?: string }>('change_password', {
+      p_key: key,
+      p_old_password: oldPassword,
+      p_new_password: newPassword,
+    })
+    if (!res.ok) throw new GardenError(res.error ?? 'wrong_password')
+  },
+  resetPassword: (key: string, firstName: string, lastName: string) =>
+    call<{ ok: boolean; error?: string; name?: string; temp_password?: string }>('reset_password', {
+      p_key: key,
+      p_first_name: firstName,
+      p_last_name: lastName,
+    }),
   leave: (key: string) => call<boolean>('leave_garden', { p_key: key }),
 
   listNotes: (o: { key: string | null; category?: CategoryId | null; sort?: Sort; limit?: number; offset?: number }) =>

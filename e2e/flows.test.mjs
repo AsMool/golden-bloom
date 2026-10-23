@@ -7,16 +7,21 @@ import { launch, notesOn, open, visit } from './browser.mjs'
 
 const run = process.env.E2E_WRITE === '1'
 const stamp = Date.now().toString(36).slice(-4)
+const letters = (n) => n.replace(/[0-9]/g, (d) => 'abcdefghij'[d])
+const lastName = (who) => `${who}${letters(stamp)}`
+const PASSWORD = 'sunny-day-77'
 const words = `Your laugh fills the whole corridor with sunshine ${stamp}`
 
 let browser, mel, sam
 
-async function join(page, name, gender) {
+async function join(page, name, last, gender, age = '15') {
   await page.locator('.site-header').getByRole('button', { name: 'Join', exact: true }).click()
   const dialog = page.getByRole('dialog')
   await dialog.getByLabel('First name').fill(name)
-  await dialog.getByLabel('Age').fill('15')
+  await dialog.getByLabel('Last name').fill(last)
+  await dialog.getByLabel('Age').fill(age)
   await dialog.getByRole('radio', { name: gender }).click()
+  await dialog.getByLabel('Choose a password').fill(PASSWORD)
   await dialog.getByRole('button', { name: /Step into the garden/ }).click()
   await page.getByText(`Welcome to the garden, ${name}!`).waitFor()
   await page.getByRole('link', { name: `Your garden, ${name}` }).waitFor()
@@ -39,8 +44,8 @@ before(async () => {
 })
 after(() => browser?.close())
 
-test('a new member joins with a first name, an age and a gender', { skip: !run }, async () => {
-  await join(mel.page, 'Mel', 'a girl')
+test('a new member joins with a name, an age, a gender and a password', { skip: !run }, async () => {
+  await join(mel.page, 'Mel', lastName('Tester'), 'a girl')
 })
 
 test('the idea button starts the note and leaves the cursor in the gap', { skip: !run }, async () => {
@@ -66,7 +71,7 @@ test('a member plants a note and lands on its corner', { skip: !run }, async () 
   await page.waitForURL(/#\/garden\/mirror-talk$/)
   const note = notesOn(page).filter({ hasText: words })
   await note.waitFor()
-  assert.match(await note.locator('.note__by').textContent(), /Mel/)
+  assert.match(await note.locator('.note__by').textContent(), /Mel T\./)
 })
 
 test('unkind words are stopped before they reach the garden', { skip: !run }, async () => {
@@ -86,13 +91,7 @@ test('a word that is often unkind asks for a quick check first', { skip: !run },
 
 test('another member gives the note a heart and reports another', { skip: !run }, async () => {
   const { page } = sam
-  await page.locator('.site-header').getByRole('button', { name: 'Join', exact: true }).click()
-  const dialog = page.getByRole('dialog')
-  await dialog.getByLabel('First name').fill('Sam')
-  await dialog.getByLabel('Age').fill('16')
-  await dialog.getByRole('radio', { name: "I'd rather not say" }).click()
-  await dialog.getByRole('button', { name: /Step into the garden/ }).click()
-  await page.getByText('Welcome to the garden, Sam!').waitFor()
+  await join(page, 'Sam', lastName('Sampson'), "I'd rather not say", '16')
 
   await visit(page, '#/garden/mirror-talk')
   const note = notesOn(page).filter({ hasText: words })
@@ -106,6 +105,23 @@ test('another member gives the note a heart and reports another', { skip: !run }
   await sheet.getByRole('radio').first().click()
   await sheet.getByRole('button', { name: /Send/ }).click()
   await page.getByText(/Thank you/).waitFor()
+})
+
+test('a member logs in from another device with name and password', { skip: !run }, async () => {
+  const fresh = await open(browser, '/')
+  const { page } = fresh
+  await page.locator('.site-header').getByRole('button', { name: 'Join', exact: true }).click()
+  const dialog = page.getByRole('dialog')
+  await dialog.getByRole('button', { name: /Log in/ }).click()
+  await dialog.getByLabel('First name').fill('mel')
+  await dialog.getByLabel('Last name').fill(lastName('Tester'))
+  await dialog.getByLabel('Password', { exact: true }).fill('wrong-password-1')
+  await dialog.getByRole('button', { name: /Open my garden/ }).click()
+  await dialog.getByRole('alert').waitFor()
+  await dialog.getByLabel('Password', { exact: true }).fill(PASSWORD)
+  await dialog.getByRole('button', { name: /Open my garden/ }).click()
+  await page.getByRole('link', { name: 'Your garden, Mel' }).waitFor()
+  await fresh.context?.close()
 })
 
 test('the author sees the heart in their garden', { skip: !run }, async () => {

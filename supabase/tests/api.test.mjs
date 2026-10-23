@@ -46,9 +46,17 @@ async function rejects(promise, message) {
 }
 
 let n = 0
-async function join(name = 'Mel', extra = {}) {
+const letters = (i) => String.fromCharCode(97 + (i % 26)) + (i >= 26 ? letters(Math.floor(i / 26) - 1) : '')
+const PASSWORD = 'sunny-day-77'
+
+// every call gets its own last name ("Tester" + letters), so names never collide between tests
+function newName(first, last) {
   n += 1
-  const res = await rpc('join_garden', { p_first_name: name, p_age: 15, p_gender: 'girl', ...extra })
+  return { p_first_name: first, p_last_name: last ?? `Tester${letters(n)}`, p_age: 15, p_gender: 'girl', p_password: PASSWORD }
+}
+
+async function join(name = 'Mel', extra = {}) {
+  const res = await rpc('sign_up', { ...newName(name), ...extra })
   return res.key
 }
 
@@ -70,27 +78,95 @@ test('the garden starts with the class notes, most loved first', async () => {
   assert.equal(page2[0].author, 'Victoria')
 })
 
-test('joining checks first name, age and gender', async () => {
-  await rejects(rpc('join_garden', { p_first_name: '  ', p_age: 15, p_gender: 'girl' }), 'invalid_name')
-  await rejects(rpc('join_garden', { p_first_name: 'Mel123', p_age: 15, p_gender: 'girl' }), 'invalid_name')
-  await rejects(rpc('join_garden', { p_first_name: 'A'.repeat(25), p_age: 15, p_gender: 'girl' }), 'invalid_name')
-  await rejects(rpc('join_garden', { p_first_name: 'Bitch', p_age: 15, p_gender: 'girl' }), 'unkind_name')
-  await rejects(rpc('join_garden', { p_first_name: 'Mel', p_age: 9, p_gender: 'girl' }), 'invalid_age')
-  await rejects(rpc('join_garden', { p_first_name: 'Mel', p_age: 100, p_gender: 'girl' }), 'invalid_age')
-  await rejects(rpc('join_garden', { p_first_name: 'Mel', p_age: 15, p_gender: 'cat' }), 'invalid_gender')
+test('joining checks names, age, gender and password', async () => {
+  const bad = (extra) => rpc('sign_up', { ...newName('Mel'), ...extra })
+  await rejects(bad({ p_first_name: '  ' }), 'invalid_name')
+  await rejects(bad({ p_first_name: 'Mel123' }), 'invalid_name')
+  await rejects(bad({ p_first_name: 'A'.repeat(25) }), 'invalid_name')
+  await rejects(bad({ p_first_name: 'Bitch' }), 'unkind_name')
+  await rejects(bad({ p_last_name: '' }), 'invalid_last_name')
+  await rejects(bad({ p_last_name: 'Smith99' }), 'invalid_last_name')
+  await rejects(bad({ p_last_name: 'Fuck' }), 'unkind_name')
+  await rejects(bad({ p_age: 9 }), 'invalid_age')
+  await rejects(bad({ p_age: 100 }), 'invalid_age')
+  await rejects(bad({ p_gender: 'cat' }), 'invalid_gender')
+  await rejects(bad({ p_password: 'short' }), 'weak_password')
+  await rejects(bad({ p_password: '123456' }), 'weak_password')
+  await rejects(bad({ p_first_name: 'Charlotte', p_password: 'charlotte' }), 'weak_password')
   for (const name of ['Zoé', 'Théo', 'Marie-Lou', "D'Arcy", 'Łucja', 'Anne Sophie']) {
-    const res = await rpc('join_garden', { p_first_name: name, p_age: 16, p_gender: 'prefer_not_to_say' })
+    const res = await rpc('sign_up', { ...newName(name), p_age: 16, p_gender: 'prefer_not_to_say' })
     assert.equal(res.member.first_name, name)
   }
-  const res = await rpc('join_garden', { p_first_name: '  Mélanie  ', p_age: 15, p_gender: 'girl' })
+  const res = await rpc('sign_up', newName('  Mélanie  ', 'Dupont'))
   assert.match(res.key, /^gb_[0-9a-f]{64}$/)
   assert.equal(res.member.first_name, 'Mélanie')
+  assert.equal(res.member.last_name, 'Dupont')
+  assert.equal(res.member.display_name, 'Mélanie D.')
   assert.equal(res.member.is_moderator, false)
+  assert.ok(!JSON.stringify(res).includes(PASSWORD), 'the password never comes back')
   const me = await rpc('me', { p_key: res.key })
   assert.equal(me.first_name, 'Mélanie')
   assert.equal(me.age, 15)
   await rejects(rpc('me', { p_key: 'gb_' + '0'.repeat(64) }), 'not_a_member')
   await rejects(rpc('me', { p_key: 'short' }), 'not_a_member')
+})
+
+test('two people cannot share a name, accents and spacing do not matter', async () => {
+  await rpc('sign_up', newName('Camille', 'Durand'))
+  await rejects(rpc('sign_up', newName('camille', 'DURAND')), 'name_taken')
+  await rejects(rpc('sign_up', newName('Cámille', 'Durand')), 'name_taken')
+  await rpc('sign_up', newName('Marie Lou', 'Petit'))
+  await rejects(rpc('sign_up', newName('Marie-Lou', 'Petit')), 'name_taken')
+  // a second Camille Durand adds a detail to the last name
+  const other = await rpc('sign_up', newName('Camille', 'Durand B'))
+  assert.equal(other.member.display_name, 'Camille D.')
+})
+
+test('logging in from another device with first name, last name and password', async () => {
+  const first = await rpc('sign_up', newName('Nina', 'Laurent'))
+  const note = await rpc('post_note', { p_key: first.key, p_category: 'mirror_talk', p_body: 'You are doing better than you think.' })
+  assert.equal(note.author, 'Nina L.')
+
+  const login = await rpc('log_in', { p_first_name: ' nina ', p_last_name: 'LAURENT', p_password: PASSWORD })
+  assert.equal(login.ok, true)
+  assert.match(login.key, /^gb_[0-9a-f]{64}$/)
+  assert.notEqual(login.key, first.key)
+  assert.equal(login.member.display_name, 'Nina L.')
+  // both devices work, and the second one sees the first one's notes
+  assert.equal((await rpc('me', { p_key: first.key })).id, login.member.id)
+  assert.equal((await rpc('my_notes', { p_key: login.key })).length, 1)
+
+  for (const wrong of [
+    { p_first_name: 'Nina', p_last_name: 'Laurent', p_password: 'wrong-password' },
+    { p_first_name: 'Nina', p_last_name: 'Nobody', p_password: PASSWORD },
+    { p_first_name: 'Nina', p_last_name: 'Laurent', p_password: '' },
+  ]) {
+    const res = await rpc('log_in', wrong)
+    assert.deepEqual(res, { ok: false, error: 'wrong_login' }, 'the same answer for a wrong password and an unknown name')
+  }
+})
+
+test('wrong passwords are limited, per name', async () => {
+  await rpc('sign_up', newName('Olivia', 'Bernard'))
+  const guess = (password, last = 'Bernard') => rpc('log_in', { p_first_name: 'Olivia', p_last_name: last, p_password: password })
+  for (let i = 0; i < 8; i += 1) assert.equal((await guess(`guess-number-${i}`)).error, 'wrong_login')
+  await rejects(guess('guess-number-9'), 'slow_down')
+  await rejects(guess(PASSWORD), 'slow_down')
+  // someone else is not affected
+  await rpc('sign_up', newName('Olivia', 'Bernardo'))
+  assert.equal((await guess(PASSWORD, 'Bernardo')).ok, true)
+})
+
+test('changing a password keeps this device and checks the old one', async () => {
+  const me = await rpc('sign_up', newName('Paul', 'Garnier'))
+  const other = await rpc('log_in', { p_first_name: 'Paul', p_last_name: 'Garnier', p_password: PASSWORD })
+  assert.deepEqual(await rpc('change_password', { p_key: me.key, p_old_password: 'not-my-password', p_new_password: 'brand-new-pass' }), { ok: false, error: 'wrong_password' })
+  await rejects(rpc('change_password', { p_key: me.key, p_old_password: PASSWORD, p_new_password: 'abc' }), 'weak_password')
+  assert.deepEqual(await rpc('change_password', { p_key: me.key, p_old_password: PASSWORD, p_new_password: 'brand-new-pass' }), { ok: true })
+  assert.equal((await rpc('log_in', { p_first_name: 'Paul', p_last_name: 'Garnier', p_password: PASSWORD })).ok, false)
+  assert.equal((await rpc('log_in', { p_first_name: 'Paul', p_last_name: 'Garnier', p_password: 'brand-new-pass' })).ok, true)
+  assert.equal((await rpc('me', { p_key: me.key })).first_name, 'Paul')
+  assert.equal((await rpc('me', { p_key: other.key })).first_name, 'Paul')
 })
 
 test('posting a note: categories, length, kind words, personal info', async () => {
@@ -108,7 +184,7 @@ test('posting a note: categories, length, kind words, personal info', async () =
   // words that are often unkind need a second "yes, it's kind"
   await rejects(post("You're not ugly, you're stunning"), 'please_confirm')
   const reviewed = await post("You're not ugly, you're stunning", { p_confirm: true })
-  assert.equal(reviewed.author, 'Ines')
+  assert.equal(reviewed.author, 'Ines T.')
   // innocent words that contain blocked ones must pass
   for (const fine of ['You are a class act, truly', 'Your passion is contagious', 'You make Scunthorpe proud', 'Cocktails of joy for you', 'Dickens would write a novel about your smile']) {
     const note = await post(fine)
@@ -158,7 +234,7 @@ test('anonymous notes never reveal their author', async () => {
   // a recipient line is ignored outside From Me To You
   const signed = await rpc('post_note', { p_key: key, p_category: 'bad_day_comfort', p_body: 'Tomorrow is a fresh page.', p_recipient: 'Sam' })
   assert.equal(signed.recipient, null)
-  assert.equal(signed.author, 'Secret')
+  assert.equal(signed.author, 'Secret T.')
 })
 
 test('hearts and shares', async () => {
@@ -264,12 +340,41 @@ test('editing your profile renames your signed notes only', async () => {
   const key = await join('Old')
   const signed = await rpc('post_note', { p_key: key, p_category: 'mirror_talk', p_body: 'Be gentle with yourself today.' })
   const anon = await rpc('post_note', { p_key: key, p_category: 'from_me_to_you', p_body: 'You light up every room.' })
-  const me = await rpc('update_me', { p_key: key, p_first_name: 'New', p_age: 17, p_gender: 'non_binary' })
+  const me = await rpc('update_profile', { p_key: key, p_first_name: 'New', p_last_name: 'Surname', p_age: 17, p_gender: 'non_binary' })
   assert.equal(me.first_name, 'New')
   assert.equal(me.gender, 'non_binary')
-  assert.equal((await rpc('get_note', { p_note_id: signed.id })).author, 'New')
+  assert.equal((await rpc('get_note', { p_note_id: signed.id })).author, 'New S.')
   assert.equal((await rpc('get_note', { p_note_id: anon.id })).author, null)
-  await rejects(rpc('update_me', { p_key: key, p_first_name: 'Connard', p_age: 17, p_gender: 'boy' }), 'unkind_name')
+  await rejects(rpc('update_profile', { p_key: key, p_first_name: 'Connard', p_last_name: 'Surname', p_age: 17, p_gender: 'boy' }), 'unkind_name')
+  // a name that is already taken
+  const taken = await rpc('sign_up', newName('Taken', 'Name'))
+  await rejects(rpc('update_profile', { p_key: key, p_first_name: 'taken', p_last_name: 'name', p_age: 17, p_gender: 'boy' }), 'name_taken')
+  assert.ok(taken.key)
+  // the new name is the one to log in with
+  assert.equal((await rpc('log_in', { p_first_name: 'New', p_last_name: 'Surname', p_password: PASSWORD })).ok, true)
+})
+
+test('moderators can reset a forgotten password', async () => {
+  const mod = await join('Helper')
+  await rpc('claim_moderator', { p_key: mod, p_code: MOD_CODE })
+  const lost = await rpc('sign_up', newName('Quinn', 'Forgetful'))
+  const plain = await join('Plain')
+  await rejects(rpc('reset_password', { p_key: plain, p_first_name: 'Quinn', p_last_name: 'Forgetful' }), 'not_allowed')
+  assert.deepEqual(await rpc('reset_password', { p_key: mod, p_first_name: 'Nobody', p_last_name: 'Here' }), { ok: false, error: 'not_found' })
+  const res = await rpc('reset_password', { p_key: mod, p_first_name: 'quinn', p_last_name: 'forgetful' })
+  assert.equal(res.ok, true)
+  assert.equal(res.name, 'Quinn F.')
+  assert.match(res.temp_password, /^[a-z2-9]{8}$/)
+  await rejects(rpc('me', { p_key: lost.key }), 'not_a_member')
+  assert.equal((await rpc('log_in', { p_first_name: 'Quinn', p_last_name: 'Forgetful', p_password: PASSWORD })).ok, false)
+  const back = await rpc('log_in', { p_first_name: 'Quinn', p_last_name: 'Forgetful', p_password: res.temp_password })
+  assert.equal(back.ok, true)
+  assert.equal(back.member.display_name, 'Quinn F.')
+})
+
+test('the old sign-up without a password is switched off', async () => {
+  const { error } = await sb.rpc('join_garden', { p_first_name: 'Sneaky', p_age: 15, p_gender: 'girl' })
+  assert.ok(error)
 })
 
 test('random note never picks your own', async () => {
@@ -297,10 +402,10 @@ test('the API exposes nothing but the functions', async () => {
 test('too many joins from one network slow down', async () => {
   const c = client('10.9.9.9')
   for (let i = 0; i < 60; i += 1) {
-    await rpc('join_garden', { p_first_name: 'Classmate', p_age: 15, p_gender: 'girl' }, c)
+    await rpc('sign_up', newName('Classmate'), c)
   }
-  await rejects(rpc('join_garden', { p_first_name: 'Late', p_age: 15, p_gender: 'girl' }, c), 'slow_down')
+  await rejects(rpc('sign_up', newName('Late'), c), 'slow_down')
   // another network is not affected
-  const other = await rpc('join_garden', { p_first_name: 'Elsewhere', p_age: 15, p_gender: 'boy' }, client('10.8.8.8'))
+  const other = await rpc('sign_up', { ...newName('Elsewhere'), p_gender: 'boy' }, client('10.8.8.8'))
   assert.ok(other.key)
 })

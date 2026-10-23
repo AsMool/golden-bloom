@@ -92,7 +92,7 @@ export default function Composer({ initialCategory, onClose }: { initialCategory
     category,
     body: body.trim(),
     recipient: anonymous ? recipient.trim() || null : null,
-    author: anonymous ? null : (member?.first_name ?? 'You'),
+    author: anonymous ? null : (member?.display_name ?? 'You'),
     paper,
     hearts: 0,
     shares: 0,

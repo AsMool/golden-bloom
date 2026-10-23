@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useState, type FormEvent } from 'react'
 import { Icon } from '../components/Icon'
 import { NoteCard } from '../components/NoteCard'
 import { api } from '../lib/api'
@@ -121,6 +121,93 @@ export function ModeratePage() {
           ))}
         </ul>
       )}
+
+      <ResetPassword />
     </div>
+  )
+}
+
+function ResetPassword() {
+  const { key } = useSession()
+  const { toast, fail } = useUi()
+  const [first, setFirst] = useState('')
+  const [last, setLast] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [message, setMessage] = useState<string | null>(null)
+  const [result, setResult] = useState<{ name: string; password: string } | null>(null)
+
+  const submit = async (e: FormEvent) => {
+    e.preventDefault()
+    if (!key) return
+    setBusy(true)
+    setMessage(null)
+    setResult(null)
+    try {
+      const res = await api.resetPassword(key, first.trim(), last.trim())
+      if (res.ok && res.temp_password) {
+        setResult({ name: res.name ?? `${first} ${last}`, password: res.temp_password })
+        setFirst('')
+        setLast('')
+      } else {
+        setMessage("No one in the garden has that first and last name. Check the spelling.")
+      }
+    } catch (err) {
+      fail(err)
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const copy = async () => {
+    if (!result) return
+    try {
+      await navigator.clipboard.writeText(result.password)
+      toast('Copied!', 'success')
+    } catch {
+      toast('Could not copy. Select it and copy by hand.', 'error')
+    }
+  }
+
+  return (
+    <form className="settings__card" onSubmit={submit} style={{ marginTop: 32 }}>
+      <h2>
+        <Icon name="key" /> Locked out?
+      </h2>
+      <p className="muted">Someone forgot their password? Type their name to give them a temporary one.</p>
+      <div className="settings__grid">
+        <label className="field">
+          <span className="field__label">First name</span>
+          <input className="input" value={first} onChange={(e) => setFirst(e.target.value)} maxLength={24} autoComplete="off" />
+        </label>
+        <label className="field">
+          <span className="field__label">Last name</span>
+          <input className="input" value={last} onChange={(e) => setLast(e.target.value)} maxLength={24} autoComplete="off" />
+        </label>
+      </div>
+      {message && (
+        <p className="form-error" role="alert">
+          {message}
+        </p>
+      )}
+      {result && (
+        <div role="status">
+          <p>
+            Temporary password for <strong>{result.name}</strong>:
+          </p>
+          <code className="garden-key">{result.password}</code>
+          <div className="settings__row">
+            <button type="button" className="btn btn--small" onClick={copy}>
+              <Icon name="copy" size={17} /> Copy
+            </button>
+          </div>
+          <p className="muted">Tell them to log in with it, then change it in Me → Settings. They are logged out everywhere else.</p>
+        </div>
+      )}
+      <div>
+        <button className="btn btn--small" disabled={busy || !first.trim() || !last.trim()}>
+          {busy ? 'Working…' : 'Make a temporary password'}
+        </button>
+      </div>
+    </form>
   )
 }
